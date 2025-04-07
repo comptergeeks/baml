@@ -587,7 +587,7 @@ impl ExpressionBlock {
 #[derive(Debug, Clone)]
 pub struct Stmt {
     pub identifier: Identifier,
-    pub body: ExpressionBlock,
+    pub body: Expression,
     pub span: Span,
 }
 

@@ -79,16 +79,15 @@ pub fn parse_statement(token: Pair<'_>, diagnostics: &mut Diagnostics) -> Option
     let rhs_span = diagnostics.span(rhs.as_span());
     let maybe_body = match rhs.as_rule() {
         Rule::expr_block => {
+            let block_span = diagnostics.span(rhs.as_span());
             eprintln!("parsing expr_block");
-            parse_expr_block(rhs, diagnostics)
+            let maybe_expr_block = parse_expr_block(rhs, diagnostics);
+            maybe_expr_block.map(|expr_block| Expression::ExprBlock(expr_block, block_span))
         }
         Rule::expression => {
             eprintln!("parsing expr");
             let maybe_expr = parse_expression(rhs, diagnostics);
-            maybe_expr.map(|expr| ExpressionBlock {
-                stmts: Vec::new(),
-                expr: Box::new(expr),
-            })
+            maybe_expr
         }
         _ => {
             diagnostics.push_error(DatamodelError::new_static(

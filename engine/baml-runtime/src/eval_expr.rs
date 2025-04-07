@@ -324,7 +324,7 @@ pub async fn eval_to_value<'a>(
     Err(anyhow::anyhow!("Max steps reached."))
 }
 
-// #[cfg(test)]
+#[cfg(test)]
 mod tests {
     use crate::internal_baml_diagnostics::Span;
     use baml_types::{BamlMap, BamlValue};

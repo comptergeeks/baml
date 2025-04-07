@@ -70,15 +70,7 @@ pub(super) fn validate_expr_fns(ctx: &mut Context<'_>) {
 }
 
 fn validate_stmt(ctx: &mut Context<'_>, stmt: &Stmt, scope: &HashSet<String>) {
-    // Make a copy of the scope above, for augmenting an passing down.
-    let mut scope_names = scope.clone();
-    for sub_stmt in stmt.body.stmts.iter() {
-        validate_stmt(ctx, sub_stmt, &scope_names);
-        scope_names.insert(sub_stmt.identifier.name().to_owned());
-    }
-
-    // Validate the expression.
-    validate_expression(ctx, &stmt.body.expr, &scope_names);
+    validate_expression(ctx, &stmt.body, scope);
 }
 
 fn validate_expression(ctx: &mut Context<'_>, expr: &Expression, scope: &HashSet<String>) {

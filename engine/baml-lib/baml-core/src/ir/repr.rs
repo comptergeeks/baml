@@ -89,22 +89,7 @@ impl WithRepr<TopLevelAssignment> for TopLevelAssignmentWalker<'_> {
             .identifier
             .name()
             .to_string();
-        let final_expr = self.top_level_assignment().stmt.body.expr.repr(db)?;
-        let expr =
-            self.top_level_assignment()
-                .stmt
-                .body
-                .stmts
-                .iter()
-                .fold(final_expr, |acc, stmt| {
-                    let stmt_expr = stmt.body.expr.repr(db).expect("TODO: Implement this");
-                    Expr::Let(
-                        stmt.identifier.name().to_string(),
-                        Arc::new(stmt_expr),
-                        Arc::new(acc),
-                        (stmt.body.expr.span().clone(), None), // TODO: Infer the type.
-                    )
-                });
+        let expr = self.top_level_assignment().stmt.body.repr(db)?;
         Ok(TopLevelAssignment {
             name: Node {
                 elem: name,
@@ -227,19 +212,18 @@ fn convert_function_body(
     db: &ParserDatabase,
 ) -> Result<Expr<ExprMetadata>> {
     function_body.expr.repr(db).map(|fn_body| {
-        let expr =
-            function_body
-                .stmts
-                .iter()
-                .fold(fn_body, |acc, stmt| match stmt.body.expr.repr(db) {
-                    Ok(stmt_expr) => Expr::Let(
-                        stmt.identifier.name().to_string(),
-                        Arc::new(stmt_expr),
-                        Arc::new(acc),
-                        (stmt.body.expr.span().clone(), None),
-                    ),
-                    Err(e) => acc,
-                });
+        let expr = function_body
+            .stmts
+            .iter()
+            .fold(fn_body, |acc, stmt| match stmt.body.repr(db) {
+                Ok(stmt_expr) => Expr::Let(
+                    stmt.identifier.name().to_string(),
+                    Arc::new(stmt_expr),
+                    Arc::new(acc),
+                    (stmt.body.span().clone(), None),
+                ),
+                Err(e) => acc,
+            });
         expr
     })
 }

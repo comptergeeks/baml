@@ -39,8 +39,13 @@ pub(crate) fn parse_expression(
         Rule::class_constructor => Some(parse_class_constructor(first_child, diagnostics)),
         Rule::fn_app => parse_fn_app(first_child, diagnostics),
         Rule::lambda => parse_lambda(first_child, diagnostics),
-        Rule::expr_block => parse_expr_block(first_child, diagnostics)
-            .map(|block| Expression::ExprBlock(block, span)),
+        Rule::expr_block => {
+            eprintln!("About to parse_expr_block on {first_child:?}");
+            let res = parse_expr_block(first_child, diagnostics);
+            eprintln!("parse_expr_block result: {res:?}");
+            res
+        }
+        .map(|block| Expression::ExprBlock(block, span)),
 
         Rule::BLOCK_LEVEL_CATCH_ALL => {
             diagnostics.push_error(

@@ -442,14 +442,16 @@ mod tests {
         match ast.tops.as_slice() {
             [Top::TopLevelAssignment(x)] => {
                 dbg!(&x);
+                dbg!(&x.stmt);
                 assert_eq!(x.stmt.identifier.name(), "x");
-                assert_eq!(x.stmt.body.stmts.len(), 1);
-                assert_eq!(x.stmt.body.stmts[0].identifier.name(), "y");
-                assert!(matches!(
-                    x.stmt.body.expr.as_ref(),
-                    Expression::FnApp(_, _, _)
-                ));
-                dbg!(&x.stmt.body.expr);
+                match &x.stmt.body {
+                    Expression::ExprBlock(ExpressionBlock { stmts, expr }, _) => {
+                        assert_eq!(stmts.len(), 1);
+                        assert_eq!(stmts[0].identifier.name(), "y");
+                        assert!(matches!(expr.as_ref(), Expression::FnApp(_, _, _)));
+                    }
+                    _ => panic!("Expected ExpressionBlock"),
+                }
             }
             _ => panic!("Expected a single top level assignment."),
         }
