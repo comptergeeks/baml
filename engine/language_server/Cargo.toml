@@ -63,6 +63,14 @@ filetime = "0.2.25"
 simple-logging = "2.0.2"
 itertools = "0.14.0"
 url.workspace = true
+tokio.workspace = true
+futures.workspace = true
+tokio-tungstenite = "0.26.2"
+socketioxide = "0.16.2"
+axum = "0.8.3"
+hyper = "1.6.0"
+axum-server = "0.7.2"
+tower-http = { version = "0.6.2", features = ["fs"] }
 
 
 [dev-dependencies]

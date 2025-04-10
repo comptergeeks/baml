@@ -91,8 +91,7 @@ impl Session {
         &self,
         path: impl AsRef<Path> + std::fmt::Debug,
     ) -> Option<&Project> {
-        self
-            .projects_by_workspace_folder
+        self.projects_by_workspace_folder
             .range(..=path.as_ref().to_path_buf())
             .next_back()
             .map(|(_, db)| db)
@@ -104,8 +103,7 @@ impl Session {
         &mut self,
         path: impl AsRef<Path> + std::fmt::Debug,
     ) -> Option<&mut Project> {
-        self
-            .projects_by_workspace_folder
+        self.projects_by_workspace_folder
             .range_mut(..=path.as_ref().to_path_buf())
             .next_back()
             .map(|(_, db)| db)
@@ -114,8 +112,11 @@ impl Session {
     /// Ensures that a project database exists for the given BAML file,
     /// creating one if it doesn't exist.
     pub fn ensure_project_db_for_baml_file(&mut self, url: &Url) -> anyhow::Result<()> {
-        let baml_src = find_top_level_parent(&PathBuf::from(url.to_file_path().map_err(|_| anyhow::anyhow!("Failed to convert URL to path"))?))
-            .context("Failed to find top level parent 2")?;
+        let baml_src = find_top_level_parent(&PathBuf::from(
+            url.to_file_path()
+                .map_err(|_| anyhow::anyhow!("Failed to convert URL to path"))?,
+        ))
+        .context("Failed to find top level parent 2")?;
         match self.project_db_for_path(&baml_src) {
             Some(_) => Ok(()),
             None => {
@@ -369,5 +370,4 @@ impl DocumentSnapshot {
     pub(crate) fn encoding(&self) -> PositionEncoding {
         self.position_encoding
     }
-
 }

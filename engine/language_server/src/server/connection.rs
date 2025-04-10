@@ -1,7 +1,6 @@
 use lsp_server as lsp;
 use lsp_types::{notification::Notification, request::Request};
 use std::sync::{Arc, Weak};
-
 type ConnectionSender = crossbeam::channel::Sender<lsp::Message>;
 type ConnectionReceiver = crossbeam::channel::Receiver<lsp::Message>;
 
@@ -37,10 +36,12 @@ impl ConnectionInitializer {
 
     /// Starts the initialization process with the client by listening for an initialization request.
     /// Returns a request ID that should be passed into `initialize_finish` later,
-    /// along with the initialization parameters that were provided.
+    /// along with the initialization parameters that were provided
+    /// here let's spin up another port and bundle a react app.
     pub fn initialize_start(
         &self,
     ) -> anyhow::Result<(lsp::RequestId, lsp_types::InitializeParams)> {
+        // initialize the port here
         let (id, params) = self.connection.initialize_start()?;
         Ok((id, serde_json::from_value(params)?))
     }

@@ -6,16 +6,18 @@ pub use session::{ClientSettings, DocumentQuery, DocumentSnapshot, Session};
 use std::num::NonZeroUsize;
 
 use crate::server::Server;
-
 #[macro_use]
 mod message;
 
 mod edit;
+mod launch; // this is for launchign the external playground server
 mod logging;
+pub mod playground;
 pub mod server;
 pub mod session;
 #[cfg(test)]
 mod tests;
+mod websocket;
 
 // additional baml modules
 mod baml_project;
@@ -36,11 +38,19 @@ pub(crate) fn version() -> &'static str {
 pub fn run_server() -> anyhow::Result<()> {
     let four = NonZeroUsize::new(4).unwrap();
 
+    // launch playground move this to servers
+
     // by default, we set the number of worker threads to `num_cpus`, with a maximum of 4.
+    // PlaygroundConnection::start_playground_server("2025");
     let worker_threads = std::thread::available_parallelism()
         .unwrap_or(four)
         .max(four);
 
+    // run the code in a tokio runtime
+
+    std::fs::write("/tmp/baml-lsp-debug.log", format!("launched websocket\n")).unwrap_or_default();
+
+    // this runs the server New command!
     Server::new(worker_threads)
         .context("Failed to start server")?
         .run()?;

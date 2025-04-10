@@ -7,6 +7,12 @@ use std::num::NonZeroUsize;
 use std::panic::PanicInfo;
 use std::path::PathBuf;
 
+use self::connection::{Connection, ConnectionInitializer};
+use self::schedule::event_loop_thread;
+use crate::baml_project::file_utils::{find_baml_src, find_top_level_parent};
+use crate::playground::serve_playground;
+use crate::session::{AllSettings, ClientSettings, Session};
+use crate::{websocket, PositionEncoding};
 use lsp_server::Message;
 use lsp_types::{
     ClientCapabilities, CodeLensOptions, CompletionOptions, DiagnosticOptions,
@@ -15,13 +21,6 @@ use lsp_types::{
     TextDocumentSyncOptions, TextDocumentSyncSaveOptions, Url,
 };
 use schedule::Task;
-
-use self::connection::{Connection, ConnectionInitializer};
-use self::schedule::event_loop_thread;
-use crate::baml_project::file_utils::{find_baml_src, find_top_level_parent};
-use crate::session::{AllSettings, ClientSettings, Session};
-use crate::PositionEncoding;
-
 pub mod api;
 pub mod client;
 pub mod connection;
@@ -42,6 +41,7 @@ pub(crate) struct Server {
 impl Server {
     pub fn new(worker_threads: NonZeroUsize) -> anyhow::Result<Self> {
         tracing::info!("Starting server with {} worker threads", worker_threads);
+
         let connection = ConnectionInitializer::stdio();
         let (id, init_params) = connection.initialize_start()?;
 
@@ -55,6 +55,41 @@ impl Server {
             crate::SERVER_NAME,
             crate::version(),
         )?;
+
+        // create a tokio runtime and spawn the websocket
+
+        let _ = std::thread::spawn(|| {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(async {
+                // Use futures::join to run both concurrently
+                let websocket_task = tokio::spawn(async {
+                    if let Err(e) = websocket::WebSocketServer::create_websocket().await {
+                        std::fs::write(
+                            "/tmp/baml-lsp-debug.log",
+                            format!("WebSocket error: {:?}\n", e),
+                        )
+                        .unwrap_or_default();
+                    }
+                });
+
+                let playground_task = tokio::spawn(async {
+                    // Note the path and port have changed compared to earlier examples
+                    serve_playground(
+                        PathBuf::from(
+                            "/Users/farhankhan/baml/engine/language_server/src/playground_code/",
+                        ),
+                        2024,
+                    )
+                    .await;
+                });
+
+                // Wait for both tasks
+                let _ = tokio::join!(websocket_task, playground_task);
+            });
+        });
+
+        std::fs::write("/tmp/baml-lsp-debug.log", format!("connected lsp\n")).unwrap_or_default();
+
         Self::new_with_connection(worker_threads, connection, init_params)
     }
 
