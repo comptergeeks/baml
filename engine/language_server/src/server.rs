@@ -60,6 +60,7 @@ impl Server {
 
         let _ = std::thread::spawn(|| {
             let rt = tokio::runtime::Runtime::new().unwrap();
+
             rt.block_on(async {
                 // Use futures::join to run both concurrently
                 let websocket_task = tokio::spawn(async {

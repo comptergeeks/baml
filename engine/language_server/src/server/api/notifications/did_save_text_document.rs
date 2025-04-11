@@ -2,6 +2,7 @@ use crate::server::api::ResultExt;
 use crate::server::client::{Notifier, Requester};
 use crate::server::Result;
 use crate::session::Session;
+use crate::websocket::WebSocketServer;
 use lsp_types as types;
 use lsp_types::notification as notif;
 
@@ -22,6 +23,8 @@ impl super::SyncNotificationHandler for DidSaveTextDocument {
         let path = url
             .to_file_path()
             .internal_error_msg("Could not convert URL to path")?;
+        let _ = WebSocketServer::send_path(&path);
+
         session.reload(Some(notifier.clone())).internal_error()?;
         tracing::info!("About to run generator");
         session

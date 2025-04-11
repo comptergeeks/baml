@@ -23,11 +23,9 @@ pub async fn serve_playground(dist_path: PathBuf, port: u16) {
     // Create the fallback file path (index.html in the same directory)
     let fallback_file = dist_path.join("index.html");
 
-    // Create router with correct SPA setup
     let app = Router::new()
         .fallback_service(ServeDir::new(dist_path).fallback(ServeFile::new(fallback_file)));
 
-    // Build the server
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     std::fs::write(
         "/tmp/baml-lsp-debug.log",

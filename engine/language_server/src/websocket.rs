@@ -1,75 +1,57 @@
-// websocket.rs
 use axum::{routing::get, Router};
-use socketioxide::{
-    extract::{Data, SocketRef},
-    SocketIo,
-};
-use std::net::SocketAddr;
+use socketioxide::{extract::SocketRef, SocketIo};
+use std::{net::SocketAddr, path::PathBuf, sync::Mutex};
 use tracing::info;
-use tracing_subscriber::FmtSubscriber;
-/// A server that creates a Socket.IO WebSocket endpoint.
+
+// A simple WebSocket server
 pub struct WebSocketServer;
 
+// Global Socket.IO instance
+static IO: std::sync::OnceLock<Mutex<Option<SocketIo>>> = std::sync::OnceLock::new();
+
 impl WebSocketServer {
-    /// Creates and runs a Socket.IO server on `127.0.0.1:6969`.
-    ///
-    /// This function:
-    /// - Sets up logging (if not already configured).
-    /// - Creates the Socket.IO layer using socketioxide.
-    /// - Registers a connection handler on the default namespace (`"/"`) that listens for a `"message"` event.
-    /// - Starts an Axum-based HTTP server, which handles both HTTP requests (e.g. for health-checks)
-    ///   and upgrades WebSocket connections according to the Socket.IO protocol.
-    ///
-    /// When a client sends a `"message"` event, the handler logs the inner message (a String)
-    /// and echoes it back to the client.
-    ///
-    /// # Example
-    ///
-    /// ```rust,no_run
-    /// #[tokio::main]
-    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     // Launch the WebSocket server.
-    ///     WebSocketServer::create_websocket().await?;
-    ///     Ok(())
-    /// }
-    /// ```
     pub async fn create_websocket() -> Result<(), Box<dyn std::error::Error>> {
-        // Initialize logging via tracing (ignore error if already set).
-        let _ = tracing::subscriber::set_global_default(FmtSubscriber::default());
+        // Create the Socket.IO layer
+        let (socket_layer, io) = SocketIo::new_layer();
 
-        // Create the Socket.IO layer and obtain the io handle.
-        let (_socket_layer, io) = SocketIo::new_layer();
+        // Store IO instance
+        IO.get_or_init(|| Mutex::new(Some(io.clone())));
 
-        // Register a connection handler on the default namespace ("/").
-        // The closure signature uses explicit types for clarity.
+        // Handle connections
         io.ns("/", |socket: SocketRef| {
-            info!("Socket.IO client connected: {}", socket.id);
-
-            // Register a handler for the "message" event.
-            socket.on("message", |socket: SocketRef, Data(data): Data<String>| {
-                // Instead of logging ?data (which requires Debug on Data<String>),
-                // we log the inner String directly.
-                info!("Received message event: {}", data);
-                // Echo the received message back to the client.
-                socket.emit("message", &data).ok();
-            });
+            info!("Client connected: {}", socket.id);
         });
 
-        std::fs::write(
-            "/tmp/baml-lsp-debug.log",
-            format!("trying to launch webserver\n"),
-        )
-        .unwrap_or_default();
+        // Create HTTP server
+        let app = Router::new()
+            .route("/", get(|| async { "BAML WebSocket Server" }))
+            .layer(socket_layer);
 
-        let app = Router::new().route("/", get(|| async { "Hello, world!" }));
         let addr = SocketAddr::from(([127, 0, 0, 1], 6969));
-        // Only use one server approach - the Axum server is sufficient
         axum_server::bind(addr)
             .serve(app.into_make_service())
-            .await?; // Use ? to propagate the error instead of unwrap()
-                     // now let's launch the react app for now
+            .await?;
 
-        // Launch the playground server
         Ok(())
+    }
+
+    // Send document path to clients
+    pub async fn send_path(path: &PathBuf) -> Result<(), String> {
+        let path_str = path.to_string_lossy();
+        info!("Attempting to send path: {}", path_str);
+
+        // Get IO instance
+        let io_lock = IO.get().ok_or("IO not initialized")?;
+        let io_guard = io_lock.lock().map_err(|_| "Failed to lock IO")?;
+
+        if let Some(io) = &*io_guard {
+            // Either use ?, or explicitly handle the result with match or if let
+            match io.emit("document_saved", &path_str).await {
+                Ok(_) => Ok(()),
+                Err(e) => Err(format!("Failed to emit event: {}", e)),
+            }
+        } else {
+            Err("SocketIo not initialized".to_string())
+        }
     }
 }

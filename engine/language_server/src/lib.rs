@@ -46,10 +46,6 @@ pub fn run_server() -> anyhow::Result<()> {
         .unwrap_or(four)
         .max(four);
 
-    // run the code in a tokio runtime
-
-    std::fs::write("/tmp/baml-lsp-debug.log", format!("launched websocket\n")).unwrap_or_default();
-
     // this runs the server New command!
     Server::new(worker_threads)
         .context("Failed to start server")?
